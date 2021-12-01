@@ -17,42 +17,46 @@ import javax.swing.JLabel;
 import javax.swing.JPanel;
 import javax.swing.SwingUtilities;
 
-public class NineBoxPuzzle extends JPanel { // our grid will be drawn in a dedicated Panel
+public class NineBoxPuzzle extends JPanel { 
   
-  // Size of our Game of Fifteen instance
+  private NineBoxPuzzle Panel;
+  private JFrame frame;
+  
   private int size;
-  // Number of tiles
-  private int nbTiles;
-  // Grid UI Dimension
+  
+  private int box;
+  
   private int dimension;
-  // Foreground Color
-  private static final Color FOREGROUND_COLOR = new Color(239, 83, 80); // we use arbitrary color
-  // Random object to shuffle tiles
+  
+  private static final Color FOREGROUND_COLOR = new Color(100, 200, 80); // we use arbitrary color
+  
   private static final Random RANDOM = new Random();
-  // Storing the tiles in a 1D Array of integers
-  private int[] tiles;
-  // Size of tile on UI
-  private int tileSize;
-  // Position of the blank tile
+  
+  private int[] box_grid;
+  
+  private int box_size;
+  
   private int blankPos;
-  // Margin for the grid on the frame
+  
   private JLabel CurrentScore;
   private int margin;
-  // Grid UI Size
-  private int gridSize;
-  private boolean gameOver; // true if game over, false otherwise
   
-  public NineBoxPuzzle(int size, int dim, int mar,int score) {
+  private int gridSize;
+  private boolean gameOver; 
+  private int score=0;
+  public NineBoxPuzzle(int size, int dim, int mar,JFrame frame) {
+	  this.frame = frame;
+	  Panel = this;
     this.size = size;
     dimension = dim;
     margin = mar;
-    // init tiles 
-    nbTiles = size * size - 1; // -1 because we don't count blank tile
-    tiles = new int[size * size];
     
-    // calculate grid size and tile size
+    box = size * size - 1; 
+    box_grid = new int[size * size];
+    
+    
     gridSize = (dim - 2 * margin);
-    tileSize = gridSize / size;
+    box_size = gridSize / size;
     
     setPreferredSize(new Dimension(dimension, dimension + margin));
     setBackground(Color.WHITE);
@@ -61,40 +65,36 @@ public class NineBoxPuzzle extends JPanel { // our grid will be drawn in a dedic
     
     gameOver = true;
     
-    addMouseListener(new MouseAdapter() {
-     private int Score = 1;
+    addMouseListener (new MouseAdapter() {
+  
 
-	// private int Score;
+	
 
 	@Override
       public void mousePressed(MouseEvent e) {
-        // used to let users to interact on the grid by clicking
-        // it's time to implement interaction with users to move tiles to solve the game !
+        
         if (gameOver) {
           newGame();
         } else {
-          // get position of the click
+          
           int ex = e.getX() - margin;
           int ey = e.getY() - margin;
           
-          // click in the grid ?
+          
           if (ex < 0 || ex > gridSize  || ey < 0  || ey > gridSize)
             return;
           
-          // get position in the grid
-          int c1 = ex / tileSize;
-          int r1 = ey / tileSize;
           
-          // get position of the blank cell
+          int c1 = ex / box_size;
+          int r1 = ey / box_size;
+          
           int c2 = blankPos % size;
           int r2 = blankPos / size;
           
-          // we convert in the 1D coord 
           int clickPos = r1 * size + c1;
           
           int dir = 0;
           
-          // we search direction for multiple tile moves at once
           if (c1 == c2  &&  Math.abs(r1 - r2) > 0)
             dir = (r1 - r2) > 0 ? size : -size;
           else if (r1 == r2 && Math.abs(c1 - c2) > 0)
@@ -104,122 +104,127 @@ public class NineBoxPuzzle extends JPanel { // our grid will be drawn in a dedic
             
             
           if (dir != 0) {
-            // we move tiles in the direction
-        	  System.out.println(this.Score);
+            
             do {
               int newBlankPos = blankPos + dir;
-              tiles[blankPos] = tiles[newBlankPos];
+              box_grid[blankPos] = box_grid[newBlankPos];
               blankPos = newBlankPos;
-              this.Score+=1;
+              score+=1;
             } while(blankPos != clickPos);
             
-            tiles[blankPos] = 0;
+            box_grid[blankPos] = 0;
           }
           
-          // we check if game is solved
+          
           gameOver = isSolved();
         }
         
-        // we repaint panel
+        
         repaint();
       }
     });
     
-    //newGame();
+    
   }
   
-//  private void UpdateScore() {
-//	    CurrentScore = new JLabel("Current Score = 0");
-//		CurrentScore.setBounds(10, 11, 120, 14);
-//		javax.swing.JPanel.add(CurrentScore);
-//  }
+
   
   private void newGame() {
-    //do {
-      reset(); // reset in intial state
-      shuffle(); // shuffle
-    //} while(!isSolvable()); // make it until grid be solvable
+    do {
+      reset(); 
+      shuffle(); 
+    } while(!isSolvable()); // make it until grid be solvable
     
     gameOver = false;
   }
   
   private void reset() {
-    for (int i = 0; i < tiles.length; i++) {
-      tiles[i] = (i + 1) % tiles.length;
+    for (int i = 0; i < box_grid.length; i++) {
+      box_grid[i] = (i + 1) % box_grid.length;
     }
     
-    // we set blank cell at the last
-    blankPos = tiles.length - 1;
+    
+    blankPos = box_grid.length - 1;
   }
   
   private void shuffle() {
-    // don't include the blank tile in the shuffle, leave in the solved position
-    int n = nbTiles;
+    
+    int n = box;
     
     while (n > 1) {
       int r = RANDOM.nextInt(n--);
-      int tmp = tiles[r];
-      tiles[r] = tiles[n];
-      tiles[n] = tmp;
+      int tmp = box_grid[r];
+      box_grid[r] = box_grid[n];
+      box_grid[n] = tmp;
     }
   }
   
-  // Only half permutations o the puzzle are solvable
-  // Whenever a tile is preceded by a tile with higher value it counts
-  // as an inversion. In our case, with the blank tile in the solved position,
-  // the number of inversions must be even for the puzzle to be solvable
-//  private boolean isSolvable() {
-//    int countInversions = 0;
-//    
-//    for (int i = 0; i < nbTiles; i++) {
-//      for (int j = 0; j < i; j++) {
-//        if (tiles[j] > tiles[i])
-//          countInversions++;
-//      }
-//    }
-//    
-//    return countInversions % 2 == 0;
-//  }
+  
+  private boolean isSolvable() {
+    int countInversions = 0;
+    
+    for (int i = 0; i < box; i++) {
+      for (int j = 0; j < i; j++) {
+        if (box_grid[j] > box_grid[i])
+          countInversions++;
+      }
+    }
+    
+    return countInversions % 2 == 0;
+  }
   
   private boolean isSolved() {
-    if (tiles[tiles.length - 1] != 0) // if blank tile is not in the solved position ==> not solved
+    if (box_grid[box_grid.length - 1] != 0) 
       return false;
     
-    for (int i = nbTiles - 1; i >= 0; i--) {
-      if (tiles[i] != i + 1)
-        return false;      
+    for (int i = box - 1; i >= 0; i--) {
+      if (box_grid[i] != i + 1)
+        return false;
     }
     
     return true;
   }
   
-  private void drawGrid(Graphics2D g) {
-    for (int i = 0; i < tiles.length; i++) {
-      // we convert 1D coords to 2D coords given the size of the 2D Array
+  private  void drawGrid (Graphics2D g) {
+    for (int i = 0; i < box_grid.length; i++) {
+      
       int r = i / size;
       int c = i % size;
-      // we convert in coords on the UI
-      int x = margin + c * tileSize;
-      int y = margin + r * tileSize;
       
-      // check special case for blank tile
-      if(tiles[i] == 0) {
+      int x = margin + c * box_size;
+      int y = margin + r * box_size;
+      
+      
+      if(box_grid[i] == 0) {
         if (gameOver) {
           g.setColor(FOREGROUND_COLOR);
-          drawCenteredString(g, "\u2713", x, y);
+
         }
         
         continue;
       }
       
-      // for other tiles
+      // for other box_grid
       g.setColor(getForeground());
-      g.fillRoundRect(x, y, tileSize, tileSize, 25, 25);
+      g.fillRoundRect(x, y, box_size, box_size, 25, 25);
       g.setColor(Color.BLACK);
-      g.drawRoundRect(x, y, tileSize, tileSize, 25, 25);
+      g.drawRoundRect(x, y, box_size, box_size, 25, 25);
       g.setColor(Color.WHITE);
-      
-      drawCenteredString(g, String.valueOf(tiles[i]), x , y);
+      g.setColor(Color.BLACK);
+      g.setFont(new Font("serif",Font.BOLD,25));
+      if( ! isSolved()) {
+    	  //DataBase d = new DataBase("jitu",30);
+    	  g.drawString(" your current score = "+score,150,30); 
+      }
+      else {
+    	  g.drawString("game over and your final score is "+score,150,30);
+    	  Panel.setVisible(false);
+    	  frame.setContentPane(new PlayerData(score,frame));
+    	  score = 0;
+    	  
+    	  //PlayerData Player = new PlayerData(score);
+      }
+      drawCenteredString(g, String.valueOf(box_grid[i]), x , y);
     }
   }
   
@@ -230,39 +235,43 @@ public class NineBoxPuzzle extends JPanel { // our grid will be drawn in a dedic
       String s = "Click to start new game";
       g.drawString(s, (getWidth() - g.getFontMetrics().stringWidth(s)) / 2,
           getHeight() - margin);
+     
     }
   }
+  
+  
   
   private void drawCenteredString(Graphics2D g, String s, int x, int y) {
     // center string s for the given tile (x,y)
     FontMetrics fm = g.getFontMetrics();
     int asc = fm.getAscent();
     int desc = fm.getDescent();
-    g.drawString(s,  x + (tileSize - fm.stringWidth(s)) / 2, 
-        y + (asc + (tileSize - (asc + desc)) / 2));
+    g.drawString(s,  x + (box_size - fm.stringWidth(s)) / 2,
+        y + (asc + (box_size - (asc + desc)) / 2));
   }
   
   @Override
   protected void paintComponent(Graphics g) {
     super.paintComponent(g);
     Graphics2D g2D = (Graphics2D) g;
-    g2D.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+    //g2D.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
     drawGrid(g2D);
     drawStartMessage(g2D);
   }
   
   public static void main(String[] args) {
-    //SwingUtilities.invokeLater(() -> {
+    
       JFrame frame = new JFrame();
+      
       frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
       frame.setTitle("Nine Box Puzzle");
       frame.setResizable(false);
-      frame.add(new NineBoxPuzzle(3, 550, 100,0), BorderLayout.CENTER);
+      frame.add(new NineBoxPuzzle(2, 550, 100,frame), BorderLayout.CENTER);
       frame.pack();
-      // center on the screen
+      
       frame.setLocationRelativeTo(null);
       frame.setVisible(true);
-    //});
+    
   }
 
   
